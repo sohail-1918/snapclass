@@ -6,8 +6,8 @@ from src.database.db import create_subject
 @st.dialog("Create New Subject")
 def create_subject_dialog(teacher_id):
     st.write("Enter the details of new subject")
-    sub_id = st.text_input("Subject Code", placeholder="CS101")
-    sub_name = st.text_input("Subject Name", placeholder="Introduction to Computer Science")
+    sub_id = st.text_input("Subject Code", placeholder="23ACA15")
+    sub_name = st.text_input("Subject Name", placeholder="Cloud Computing For AI")
     sub_section = st.text_input("Section", placeholder="A")
 
 
