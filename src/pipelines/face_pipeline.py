@@ -93,7 +93,7 @@ def predict_attendance(class_image):
     y_train = model_data["y"]
 
     all_students = sorted(list(set(y_train)))
-    resemblance_threshold = 0.65
+    resemblance_threshold = 0.60
 
     for encoding in encodings:
         # Compute distance to ALL embeddings
