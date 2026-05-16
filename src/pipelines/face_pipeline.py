@@ -3,7 +3,6 @@ import numpy as np
 import face_recognition_models
 from sklearn.svm import SVC
 import streamlit as st
-from PIL import Image
 
 from src.database.db import get_all_students
 
@@ -20,25 +19,25 @@ def load_dlib_models():
 
 
 # -----------------------------
+# Normalize embeddings
+# -----------------------------
+def normalize_embedding(embedding):
+    emb = np.array(embedding, dtype=np.float64)
+    return emb / np.linalg.norm(emb)
+
+
+# -----------------------------
 # Get embeddings for ALL faces in one photo
 # -----------------------------
-def get_face_embeddings(image_input):
+def get_face_embeddings(image_np):
     detector, sp, facerec = load_dlib_models()
+    faces = detector(image_np, 1)
 
-    if isinstance(image_input, Image.Image):
-        image_rgb = np.array(image_input.convert("RGB"))
-    elif isinstance(image_input, np.ndarray):
-        image_rgb = image_input
-    else:
-        raise ValueError("Unsupported image type")
-
-    faces = detector(image_rgb, 1)  # detect all faces
     encodings = []
-
     for face in faces:
-        shape = sp(image_rgb, face)
-        face_descriptor = facerec.compute_face_descriptor(image_rgb, shape, 1)
-        encodings.append(np.array(face_descriptor))
+        shape = sp(image_np, face)
+        face_descriptor = facerec.compute_face_descriptor(image_np, shape, 1)
+        encodings.append(normalize_embedding(face_descriptor))
 
     return encodings
 
@@ -56,8 +55,8 @@ def get_trained_model():
 
     for student in student_db:
         embedding = student.get("face_embedding")
-        if embedding is not None:
-            X.append(np.array(embedding))
+        if embedding:
+            X.append(normalize_embedding(embedding))
             y.append(student.get("student_id"))
 
     if len(X) == 0:
@@ -79,10 +78,10 @@ def train_classifier():
 
 
 # -----------------------------
-# Predict attendance for multiple people in one photo
+# Predict attendance for multiple people
 # -----------------------------
-def predict_attendance(class_image):
-    encodings = get_face_embeddings(class_image)
+def predict_attendance(class_image_np, threshold=0.65):
+    encodings = get_face_embeddings(class_image_np)
     detected_students = {}
 
     model_data = get_trained_model()
@@ -91,22 +90,21 @@ def predict_attendance(class_image):
 
     X_train = model_data["X"]
     y_train = model_data["y"]
-
     all_students = sorted(list(set(y_train)))
-    resemblance_threshold = 0.60
 
     for encoding in encodings:
-        # Compute distance to ALL embeddings
+        # Compare this face against ALL stored embeddings
         distances = [np.linalg.norm(train_emb - encoding) for train_emb in X_train]
         min_index = int(np.argmin(distances))
         best_match_id = int(y_train[min_index])
         best_match_score = distances[min_index]
 
-        # Corrected condition with full variable name and colon
-        if best_match_score <= resemblance_threshold:
+        st.write(f"Face match candidate {best_match_id}, distance {best_match_score:.4f}")
+
+        if best_match_score <= threshold:
             detected_students[best_match_id] = True
         else:
-            print("Unknown face detected")
+            st.warning("Face detected but not recognized")
 
     return detected_students, all_students, len(encodings)
 
@@ -120,9 +118,13 @@ def main():
     img_file = st.camera_input("Take a group photo")
 
     if img_file is not None:
-        image = Image.open(img_file)
+        import cv2
+        from PIL import Image
 
-        detected_students, all_students, num_faces = predict_attendance(image)
+        image = Image.open(img_file)
+        image_np = np.array(image.convert("RGB"), dtype=np.uint8)
+
+        detected_students, all_students, num_faces = predict_attendance(image_np)
 
         if num_faces == 0:
             st.warning("No faces found!")
@@ -135,3 +137,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
