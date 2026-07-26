@@ -89,24 +89,32 @@ def train_classifier():
 # rejects genuine matches. 1.0 is a starting point; tune based on real
 # distance values logged during testing (temporarily re-enable the debug
 # st.write below to see actual scores for known-correct matches).
-def predict_attendance(class_image_np, threshold=1.0):
+def predict_attendance(class_image_np, threshold=1.0, debug=False):
     encodings = get_face_embeddings(class_image_np)
     detected_students = {}
 
+    if debug:
+        st.info(f"Debug: {len(encodings)} face(s) detected in this photo")
+
     model_data = get_trained_model()
     if not model_data:
+        if debug:
+            st.warning("Debug: no trained model available (no students with face_embedding in DB, or model failed to train)")
         return detected_students, [], len(encodings)
 
     X_train = model_data["X"]
     y_train = model_data["y"]
     all_students = sorted(list(set(y_train)))
 
-    for encoding in encodings:
+    for i, encoding in enumerate(encodings):
         # Compare this face against ALL stored embeddings
         distances = [np.linalg.norm(train_emb - encoding) for train_emb in X_train]
         min_index = int(np.argmin(distances))
         best_match_id = int(y_train[min_index])
         best_match_score = distances[min_index]
+
+        if debug:
+            st.info(f"Debug: Face {i+1} -> closest match student {best_match_id}, distance {best_match_score:.4f} (threshold {threshold})")
 
         if best_match_score <= threshold:
             detected_students[best_match_id] = True
