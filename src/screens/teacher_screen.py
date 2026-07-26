@@ -133,6 +133,8 @@ def teacher_tab_take_attendance():
     with c1:
         if st.button('Clear all photos', width='stretch', type='tertiary', icon=':material/delete:', disabled=not has_photos):
             st.session_state.attendance_images = []
+            st.session_state.pop('last_cam_id', None)
+            st.session_state.pop('processed_upload_ids', None)
             st.rerun()
 
 
