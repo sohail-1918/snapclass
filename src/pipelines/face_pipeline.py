@@ -80,7 +80,16 @@ def train_classifier():
 # -----------------------------
 # Predict attendance for multiple people
 # -----------------------------
-def predict_attendance(class_image_np, threshold=0.65):
+# NOTE: threshold is calibrated for L2-NORMALIZED embeddings (unit vectors).
+# normalize_embedding() divides each descriptor by its own norm (~0.45-0.5
+# for raw dlib descriptors), which roughly doubles the effective distance
+# between any two embeddings compared to dlib's raw (non-normalized) output.
+# The commonly cited dlib/face_recognition threshold of ~0.6 assumes RAW
+# descriptors -- using that number here on normalized embeddings incorrectly
+# rejects genuine matches. 1.0 is a starting point; tune based on real
+# distance values logged during testing (temporarily re-enable the debug
+# st.write below to see actual scores for known-correct matches).
+def predict_attendance(class_image_np, threshold=1.0):
     encodings = get_face_embeddings(class_image_np)
     detected_students = {}
 
@@ -99,12 +108,8 @@ def predict_attendance(class_image_np, threshold=0.65):
         best_match_id = int(y_train[min_index])
         best_match_score = distances[min_index]
 
-        st.write(f"Face match candidate {best_match_id}, distance {best_match_score:.4f}")
-
         if best_match_score <= threshold:
             detected_students[best_match_id] = True
-        else:
-            st.warning("Face detected but not recognized")
 
     return detected_students, all_students, len(encodings)
 
@@ -118,7 +123,6 @@ def main():
     img_file = st.camera_input("Take a group photo")
 
     if img_file is not None:
-        import cv2
         from PIL import Image
 
         image = Image.open(img_file)
@@ -137,4 +141,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
