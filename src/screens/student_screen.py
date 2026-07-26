@@ -159,8 +159,8 @@ def student_screen():
             if st.button('Create Account', type='primary'):
                 if new_name:
                     with st.spinner('Creating profile..'):
-                        image_np = cv2.resize(image_np, (640, 480))
-                        encodings= get_face_embeddings(img_np)
+                        image_np = cv2.resize(img, (640, 480))
+                        encodings = get_face_embeddings(image_np)
                         if encodings:
                             face_emb = encodings[0].tolist()
 
