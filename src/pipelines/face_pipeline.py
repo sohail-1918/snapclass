@@ -62,11 +62,17 @@ def get_trained_model():
     if len(X) == 0:
         return None
 
-    clf = SVC(kernel="linear", probability=True, class_weight="balanced")
-    try:
-        clf.fit(X, y)
-    except ValueError:
-        return None
+    # SVC needs at least 2 distinct students (classes) to train, and isn't
+    # actually used by predict_attendance (which does raw nearest-neighbor
+    # distance matching on X/y directly). So a training failure here should
+    # never block returning X/y -- only skip the classifier itself.
+    clf = None
+    if len(set(y)) >= 2:
+        try:
+            clf = SVC(kernel="linear", probability=True, class_weight="balanced")
+            clf.fit(X, y)
+        except ValueError:
+            clf = None
 
     return {"clf": clf, "X": X, "y": y}
 
