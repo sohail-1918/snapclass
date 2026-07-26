@@ -1,4 +1,5 @@
 import streamlit as st
+import cv2
 
 from src.ui.base_layout import style_background_dashboard, style_base_layout
 
